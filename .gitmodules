@@ -79,3 +79,12 @@
 [submodule "section2/StandardProxy/lib/forge-std"]
 	path = section2/StandardProxy/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "homeworks/MyCompound/lib/forge-std"]
+	path = homeworks/MyCompound/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "homeworks/MyCompound/lib/compound-protocol"]
+	path = homeworks/MyCompound/lib/compound-protocol
+	url = https://github.com/compound-finance/compound-protocol
+[submodule "homeworks/MyCompound/lib/openzeppelin-contracts"]
+	path = homeworks/MyCompound/lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
