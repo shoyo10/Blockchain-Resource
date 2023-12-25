@@ -11,6 +11,8 @@ import { InterestRateModel } from "compound-protocol/contracts/InterestRateModel
 import { CToken } from "compound-protocol/contracts/CToken.sol";
 import { ComptrollerInterface } from "compound-protocol/contracts/ComptrollerInterface.sol";
 import { CTokenInterface } from "compound-protocol/contracts/CTokenInterfaces.sol";
+import { CompoundAAVEFlashloan } from "../src/CompoundAAVEFlashloan.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract MyCompoundTest is MyCompoundSetUp {
     address public user1;
@@ -154,6 +156,61 @@ contract MyCompoundTest is MyCompoundSetUp {
         (success, liquidity, shortfall) = comptroller.getAccountLiquidity(user1);
         assertEq(success, 0);
         assertGt(liquidity, 0);
+    }
+
+    function test_aave_flashloan() public {
+        address USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+        address UNI = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
+        // Fork Ethereum mainnet at block 17465000
+        string memory rpc = vm.envString("MAINNET_RPC_URL");
+        vm.createSelectFork(rpc, 17465000);
+
+        CompoundAAVEFlashloan compoundAAVEFlashloan = new CompoundAAVEFlashloan();
+
+        // 先讓 user2 抵押 USDC, 這樣後面 user1 才能借 USDC
+        uint256 user2InitialBalance = 2500 * 10 ** 6;
+        deal(compoundAAVEFlashloan.USDC(), user2, user2InitialBalance);
+        vm.startPrank(user2);
+        (bool success, ) =
+            compoundAAVEFlashloan.USDC().call(
+                abi.encodeWithSignature("approve(address,uint256)", address(compoundAAVEFlashloan.cUSDCDelegator()), user2InitialBalance)
+                );
+        require(success, "Approve failed");
+        (uint ok) = compoundAAVEFlashloan.cUSDCDelegator().mint(user2InitialBalance);
+        require(ok == 0, "Mint failed");
+        vm.stopPrank();
+
+        // user1 抵押 UNI, 借 USDC
+        vm.startPrank(user1);
+        uint256 mintAmount = 1000 * 10 ** ERC20(compoundAAVEFlashloan.UNI()).decimals();
+        uint256 borrowAmount = 2500 * 10 ** 6;
+
+        deal(compoundAAVEFlashloan.UNI(), user1, mintAmount);
+        (success, ) =
+            compoundAAVEFlashloan.UNI().call(
+                abi.encodeWithSignature("approve(address,uint256)", address(compoundAAVEFlashloan.cUNIDelegator()), mintAmount)
+                );
+        require(success, "Approve failed");
+
+        (ok) = compoundAAVEFlashloan.cUNIDelegator().mint(mintAmount);
+        require(ok == 0, "Mint failed");
+
+        address[] memory cTokens = new address[](1);
+        cTokens[0] = address(compoundAAVEFlashloan.cUNIDelegator());
+        compoundAAVEFlashloan.comptroller().enterMarkets(cTokens);
+        // user1 借 USDC
+        compoundAAVEFlashloan.cUSDCDelegator().borrow(borrowAmount);
+        vm.stopPrank();
+
+        // update UNI price
+        compoundAAVEFlashloan.updateUNIPrice(4*10**18);
+
+        // user2 幫 user1 償還債務，user1 的債務為 2500 USDC，close factor 為 0.5，所以 user2 可幫償還 1250 USDC
+        vm.startPrank(user2);
+        compoundAAVEFlashloan.execute(user1, 1250 * 10 ** 6);
+        vm.stopPrank();
+        // 測試結果可得 63.638693 顆USDC
+        console.log("user2 USDC balance: %s", ERC20(compoundAAVEFlashloan.USDC()).balanceOf(user2));        
     }
 
     function borrow() public {

@@ -88,3 +88,12 @@
 [submodule "homeworks/MyCompound/lib/openzeppelin-contracts"]
 	path = homeworks/MyCompound/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
+[submodule "homeworks/MyCompound/lib/aave-v3-core"]
+	path = homeworks/MyCompound/lib/aave-v3-core
+	url = https://github.com/aave/aave-v3-core
+[submodule "homeworks/MyCompound/lib/v3-periphery"]
+	path = homeworks/MyCompound/lib/v3-periphery
+	url = https://github.com/Uniswap/v3-periphery
+[submodule "homeworks/MyCompound/lib/v3-core"]
+	path = homeworks/MyCompound/lib/v3-core
+	url = https://github.com/Uniswap/v3-core
